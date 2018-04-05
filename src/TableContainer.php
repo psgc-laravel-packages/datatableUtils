@@ -8,16 +8,46 @@ class TableContainer
 {
 
     protected $_columns;
+    protected $_modelClass;
     public $tablename;
 
-    public function __construct($tablename)
+    // $modelClass must be fully qualified namespace
+    public function __construct(string $tablename, string $modelClass=null, array $cols=null)
     {
         $this->_columns = [];
         $this->tablename = $tablename;
+
+        // legacy...%TODO eventually remove the condition and always do this, and change addColumn() to protected
+        if ( !is_null($modelClass) && !empty($cols) ) {
+            $this->_modelClass = $modelClass;
+            $this->_addColumns( $cols );
+        }
+
+    }
+
+    // %FIXME: really need to get package versioning
+    public function initLegacy(string $tablename) 
+    {
+        return new self($tablename);
+    }
+
+    // %TODO: put in package, call in constructor!
+    // $modelClass must be fully qualified namespace
+    protected function _addColumns(array $cols)
+    {
+        $modelClass = $this->_modelClass;
+        foreach ($cols as $col) {
+            $this->addColumn(
+                $col, // prefix with underscore
+                //'_'.$col, // prefix with underscore %TODO: do this in the pakcage lib , renderColumnVals()
+                $modelClass::_renderFieldKey($col)
+                //function($r) { return link_to_route('site.projects.show',$r->renderField('guid'),$r->guid)->toHtml(); }
+            );
+        }
     }
 
     // $_setter is a closure
-    public function addColumn(String $_data, String $_title, Closure $_setter=null, String $_name=null)
+    public function addColumn(string $_data, string $_title, Closure $_setter=null, string $_name=null)
     {
         $c = new stdClass();
         $c->data   = $_data;
@@ -27,7 +57,7 @@ class TableContainer
         $this->_columns[] = $c;
     }
 
-    public function columnConfig()
+    public function columnConfig() : array
     {
         $config = [ 'columns'=>[] ];
         foreach ($this->_columns as $c) {
@@ -38,7 +68,7 @@ class TableContainer
 
     // Set rendering for special fields such as links, FKs, etc
     //   ~ if not listed here will just default to 'pass-through' of raw column/field name's value
-    public function renderColumnVals(&$records)
+    public function renderColumnVals(array &$records) : array
     {
         $columns = $this->_columns;
         $records->each(function($r) use($columns) { // Render html for each row's inline form /*
