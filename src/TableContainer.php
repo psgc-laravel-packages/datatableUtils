@@ -3,6 +3,8 @@ namespace PsgcLaravelPackages\DatatableUtils;
 
 use Closure;
 use stdClass;
+use PsgcLaravelPackages\Utils\FieldRenderable; // %NOTE %FIXME: outside dependency!
+
 
 // %FIXME: this package requires that models implement Nameable interface (which btw is local to project, should be
 // moved to be part of this package)
@@ -61,6 +63,7 @@ class TableContainer
 
     public function columnConfig() : array
     {
+        // needed by JS at time of page render (before AJAX)
         $config = [ 'columns'=>[] ];
         foreach ($this->_columns as $c) {
             $config['columns'][] = [ 'data'=>$c->data, 'title'=>$c->title, 'name'=>$c->name ];
@@ -77,9 +80,15 @@ class TableContainer
         $records->each(function($r) use($columns) { // Render html for each row's inline form /*
             foreach ($columns as $c) {
                 $cname = $c->name;
+                if ( $r instanceof FieldRenderable ) {
+                    $r->{$cname} = $r->renderField($cname);
+                } else {
+                }
+                /*
                 if ( !is_null($c->setter) && is_callable($c->setter) ) {
                     $r->{$cname} = ($c->setter)($r); // use closure
                 } // ...otherwise use 'raw' value based on cname (default, no action needed here)
+                 */
             }
         });
         return $records;
