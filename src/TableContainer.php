@@ -74,12 +74,13 @@ class TableContainer
     // Set rendering for special fields such as links, FKs, etc
     //   ~ if not listed here will just default to 'pass-through' of raw column/field name's value
 //   %TODO: add type hints (eloquent collections? objects? array gives error)
-    public function renderColumnVals(&$records)
+    public static function renderColumnVals(&$records, array $columns)
     {
-        $columns = $this->_columns;
+        //$columns = $this->_columns;
         $records->each(function($r) use($columns) { // Render html for each row's inline form /*
             foreach ($columns as $c) {
-                $cname = $c->name;
+                //$cname = $c->name;
+                $cname = $c;
                 if ( $r instanceof FieldRenderable ) {
                     $r->{$cname} = $r->renderField($cname);
                 } else {
