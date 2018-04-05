@@ -3,7 +3,9 @@ namespace PsgcLaravelPackages\DatatableUtils;
 
 use Closure;
 use stdClass;
-use PsgcLaravelPackages\Utils\FieldRenderable; // %NOTE %FIXME: outside dependency!
+
+use PsgcLaravelPackages\Utils\Helpers; // %FIXME: outside dependency
+use PsgcLaravelPackages\DatatableUtils\FieldRenderable;
 
 
 // %FIXME: this package requires that models implement Nameable interface (which btw is local to project, should be
@@ -40,6 +42,9 @@ class TableContainer
     protected function _addColumns(array $cols)
     {
         $modelClass = $this->_modelClass;
+        if ( $modelClass !instanceof FieldRenderable ) {
+            throw new \Exception('Object must implement PsgcLaravelPackages\DatatableUtils\FieldRenderable');
+        }
         foreach ($cols as $col) {
             $this->addColumn(
                 $col, // prefix with underscore
@@ -81,9 +86,15 @@ class TableContainer
             foreach ($columns as $c) {
                 //$cname = $c->name;
                 $cname = $c;
-                if ( $r instanceof FieldRenderable ) {
-                    $r->{$cname} = $r->renderField($cname);
+                if ( Helpers::isJson($cname) ) {
+                    $json = json_decode($cname);
+                    dd($json);
                 } else {
+                    if ( $r instanceof FieldRenderable ) {
+                        $r->{$cname} = $r->renderField($cname);
+                    } else {
+                        throw new \Exception('Object must implement PsgcLaravelPackages\DatatableUtils\FieldRenderable');
+                    }
                 }
                 /*
                 if ( !is_null($c->setter) && is_callable($c->setter) ) {
