@@ -42,9 +42,12 @@ class TableContainer
     protected function _addColumns(array $cols)
     {
         $modelClass = $this->_modelClass;
-        if ( $modelClass !instanceof FieldRenderable ) {
+
+        // Check that this class implements FieldRenderable interface ( ~~ instanceof )
+        if ( !in_array('PsgcLaravelPackages\DatatableUtils\FieldRenderable', class_implements($modelClass)) ) {
             throw new \Exception('Object must implement PsgcLaravelPackages\DatatableUtils\FieldRenderable');
         }
+
         foreach ($cols as $col) {
             $this->addColumn(
                 $col, // prefix with underscore
@@ -88,13 +91,19 @@ class TableContainer
                 $cname = $c;
                 if ( Helpers::isJson($cname) ) {
                     $json = json_decode($cname);
-                    dd($json);
-                } else {
-                    if ( $r instanceof FieldRenderable ) {
-                        $r->{$cname} = $r->renderField($cname);
-                    } else {
-                        throw new \Exception('Object must implement PsgcLaravelPackages\DatatableUtils\FieldRenderable');
+                    switch ($json->op) {
+                        case 'link_to_route':
+                            $resourceIdCol = $json->resourceIdCol; // slug, guid, id (pkid), etc
+                            $resourceVal = $r->{$resourceIdCol}; // the actual object's value for this field
+                            $renderedVal = ($r instanceof FieldRenderable) ? $r->renderField($json->colName) : $r->{$json->colName};
+                            $r->{$cname} =  link_to_route($json->route,$renderedVal,$resourceVal)->toHtml();
+                            break;
+                        default:
+                            $r->{$cname} = ($r instanceof FieldRenderable) ? $r->renderField($cname) : $cname;
                     }
+                    //dd($json);
+                } else {
+                    $r->{$cname} = ($r instanceof FieldRenderable) ? $r->renderField($cname) : $cname;
                 }
                 /*
                 if ( !is_null($c->setter) && is_callable($c->setter) ) {
