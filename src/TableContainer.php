@@ -18,60 +18,45 @@ class TableContainer
     public $tablename;
 
     // $modelClass must be fully qualified namespace
-    public function __construct(string $tablename, string $modelClass=null, array $cols=null)
+    public function __construct(string $tablename, string $modelClass, array $cols)
     {
         $this->_columns = [];
         $this->tablename = $tablename;
-
-        // legacy...%TODO eventually remove the condition and always do this, and change addColumn() to protected
-        if ( !is_null($modelClass) && !empty($cols) ) {
-            $this->_modelClass = $modelClass;
-            $this->_addColumns( $cols );
-        }
-
-    }
-
-    // %FIXME: really need to get package versioning
-    public function initLegacy(string $tablename) 
-    {
-        return new self($tablename);
-    }
-
-    // %TODO: put in package, call in constructor!
-    // $modelClass must be fully qualified namespace
-    protected function _addColumns(array $cols)
-    {
-        $modelClass = $this->_modelClass;
 
         // Check that this class implements FieldRenderable interface ( ~~ instanceof )
         if ( !in_array('PsgcLaravelPackages\DatatableUtils\FieldRenderable', class_implements($modelClass)) ) {
             throw new \Exception('Object must implement PsgcLaravelPackages\DatatableUtils\FieldRenderable');
         }
+        $this->_modelClass = $modelClass;
+
+        $//this->_addColumns( $cols );
+        // $modelClass must be fully qualified namespace
 
         foreach ($cols as $col) {
-            $this->addColumn(
-                $col, // prefix with underscore
-                //'_'.$col, // prefix with underscore %TODO: do this in the pakcage lib , renderColumnVals()
-                $modelClass::_renderFieldKey($col)
-            );
+            $this->addColumn($col);
         }
     }
 
-    public function addColumn(string $_data, string $_title, string $_name=null)
+    //protected function addColumn(string $_data, string $_title, string $_name=null)
+    protected function addColumn(string $col)
     {
+        $modelClass = $this->_modelClass;
         if ( Helpers::isJson($_data) ) {
             $json = json_decode($_data);
             switch ($json->op) {
                 case 'link_to_route':
                     $_data = $json->colName.'_'.$json->op; // replace with string that will be used below for renderColumnVals()
+                    $_title = $modelClass::_renderFieldKey($json->colName)
                     break;
             }
+        } else { 
+            $_title = $modelClass::_renderFieldKey($col)
         }
 
         $c = new stdClass();
         $c->data   = $_data;
         $c->title  = $_title;
-        $c->name   = !empty($_name) ? $_name : $_data;
+        $c->name   = !empty($_name) ? $_name : $_data; // %FIXME: add _name option (?)
         $this->_columns[] = $c;
     }
 
