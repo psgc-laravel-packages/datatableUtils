@@ -59,8 +59,8 @@ class TableContainer
 
     public function addColumn(string $_data, string $_title, string $_name=null)
     {
-        if ( Helpers::isJson($cname) ) {
-            $json = json_decode($cname);
+        if ( Helpers::isJson($_data) ) {
+            $json = json_decode($_data);
             switch ($json->op) {
                 case 'link_to_route':
                     $_data = $json->colName.'_'.$json->op; // replace with string that will be used below for renderColumnVals()
