@@ -108,7 +108,7 @@ class TableContainer
                             $r->{$colElem} = ($r instanceof FieldRenderable) ? $r->renderField($colElem) : $colElem;
                     }
                     //dd($json);
-                } else if ( is_string($colElem) {
+                } else if ( is_string($colElem) )  {
                     // colElem is a simple string
                     $r->{$colElem} = ($r instanceof FieldRenderable) ? $r->renderField($colElem) : $colElem;
                 } else {
