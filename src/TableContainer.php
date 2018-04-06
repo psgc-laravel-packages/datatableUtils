@@ -13,14 +13,14 @@ use PsgcLaravelPackages\DatatableUtils\FieldRenderable;
 class TableContainer
 {
 
-    protected $_colConfigs;
     protected $_modelClass;
+    protected $_columns;
+    protected $_meta;
     public $tablename;
 
     // $modelClass must be fully qualified namespace
     public function __construct(string $tablename, string $modelClass, array $colConfigs)
     {
-        $this->_colConfigs = $colConfigs;
         $this->tablename = $tablename;
 
         // Check that this class implements FieldRenderable interface ( ~~ instanceof )
@@ -28,44 +28,55 @@ class TableContainer
             throw new \Exception('Object must implement PsgcLaravelPackages\DatatableUtils\FieldRenderable');
         }
         $this->_modelClass = $modelClass; 
+
+        $this->_columns = [];
+        $this->_meta = [];
+        foreach ($colConfigs as $ccElem) {
+
+            $key = $ccElem['colName']; // this will *always* be set, by rule (%TODO add check)
+
+            // %TODO: check if FieldRenderable is implemented, if not choose suitable defaults (see above)
+            $c = [
+                   'title'  => empty($ccElem['title']) ? $modelClass::_renderFieldKey($key) : $ccElem['title'],
+                   'name'   => $key,
+               ];
+            $c['data'] = array_key_exists('op', $ccElem) 
+                            ? $key.'_'.$ccElem['op'] // replace with string that will be used below for renderColumnVals()
+                            : $key;
+            $this->_columns[] = $c;
+
+            if ( array_key_exists('op', $ccElem) ) {
+                $copy = $ccElem;
+                unset($copy['title']); // drop some fields
+                $this->_meta[$key] = json_encode($copy);
+            }
+        }
+        /*
+            $dtC =  new TableContainer( 'purchaseorders', '\App\Models\Purchaseorder', [
+                //'guid.link-site.purchaseorders.show',
+                //json_encode(['guid'=>['link'=>'site.purchaseorders.show']]),
+                [
+                    'colName'=>'guid', // colName -> column name in DB, not displayed
+                    'op'=>'link_to_route',
+                    'route'=>'site.purchaseorders.show',
+                    'resourceIdCol'=>'guid', // column value to use for route param if applicable
+                ],
+                ['colName'=>'postate'],
+                ['colName'=>'slug'],
+                ['colName'=>'poname']
+            ] );
+         */
     }
 
 
     public function meta() : array
     {
-        return $this->_colConfigs;
+        return $this->_meta;
     }
 
     public function columns() : array
     {
-        $modelClass = $this->_modelClass;
-
-        // needed by JS at time of page render (before AJAX)
-        $columns = [];
-        foreach ($this->_colConfigs as $ccElem) {
-            $c = [];
-            if ( Helpers::isJson($cc) ) { // JSON format
-                $json = json_decode($ccElem);
-                switch ($json->op) {
-                    case 'link_to_route':
-                        // add a first
-                        $c['data']  = $json->colName.'_'.$json->op; // replace with string that will be used below for renderColumnVals()
-                        $c['title'] = $modelClass::_renderFieldKey($json->colName);
-                        $c['name']  = $json->colName;
-                        break;
-                }
-            } else {  // plain string format ($ccElem is same as the column data)
-                $c['data']  = $ccElem;
-                $c['title'] = $modelClass::_renderFieldKey($ccElem);
-                $c['name']  = $ccElem;
-                //$c['name'] = !empty($_name) ? $_name : $_data; // %FIXME: add _name option (?)
-            }
-// ---
-            //$config['columns'][] = [ 'data'=>$ccElem->data, 'title'=>$ccElem->title, 'name'=>$ccElem->name ];
-            $columns[] = $c;
-        }
-        //dump($config);
-        return $columns;
+        return $this->_columns;
     }
 
 
@@ -74,35 +85,31 @@ class TableContainer
     //   ~ $colConfigs has to be passed by caller, as PHP doesn't carry state between requests (thus
     //        we have no way to re-init the same object of this class)
 //   %TODO: add type hints (eloquent collections? objects? array gives error)
-    public static function renderColumnVals(&$records, array $colConfigs)
+    public static function renderColumnVals(&$records, array $meta)
     {
-        $records->each(function($r) use($colConfigs) { // Render html for each row's inline form /*
-            foreach ($colConfigs as $ccElem) {
-                if ( Helpers::isJson($ccElem) ) {
-                    $json = json_decode($ccElem);
-                    switch ($json->op) {
-                        case 'link_to_route':
-                            $resourceIdCol = $json->resourceIdCol; // slug, guid, id (pkid), etc
-                            $resourceVal = $r->{$resourceIdCol}; // the actual object's value for this field
-                            $renderedVal = ($r instanceof FieldRenderable) ? $r->renderField($json->colName) : $r->{$json->colName};
-                            //$r->{$ccElem} =  link_to_route($json->route,$renderedVal,$resourceVal)->toHtml();
-                            $colConfigs[$json->colName.'_'.$json->op] = link_to_route($json->route,$renderedVal,$resourceVal)->toHtml();
-                            unset($colConfigs[$ccElem]);
-                            break;
-                        default:
-                            $r->{$ccElem} = ($r instanceof FieldRenderable) ? $r->renderField($ccElem) : $ccElem;
-                    }
-                    //dd($json);
+        //dd($meta);
+        $records->each(function($r) use($meta) { // Render html for each row's inline form /*
+            foreach ($meta as $ccElem) {
+                $json = json_decode($ccElem);
+                // %FIXME: op is required
+                switch ($json->op) {
+                    case 'link_to_route':
+                        $resourceIdCol = $json->resourceIdCol; // slug, guid, id (pkid), etc
+                        $resourceVal = $r->{$resourceIdCol}; // the actual object's value for this field
+                        $renderedVal = ($r instanceof FieldRenderable) ? $r->renderField($json->colName) : $r->{$json->colName};
+                        //$r->{$ccElem} =  link_to_route($json->route,$renderedVal,$resourceVal)->toHtml();
+                        $r->{$json->colName.'_'.$json->op} = link_to_route($json->route,$renderedVal,$resourceVal)->toHtml();
+                        //unset($meta[$ccElem]);
+                        break;
+                    default:
+                        $r->{$ccElem} = ($r instanceof FieldRenderable) ? $r->renderField($ccElem) : $ccElem;
+                }
+                //dd($json);
+                /*
                 } else if ( is_string($ccElem) )  {
                     // ccElem is a simple string
                     $r->{$ccElem} = ($r instanceof FieldRenderable) ? $r->renderField($ccElem) : $ccElem;
-                } else {
-                    throw new \Exception('Column Object must be json string or simple string');
                 }
-                /*
-                if ( !is_null($c->setter) && is_callable($c->setter) ) {
-                    $r->{$cname} = ($c->setter)($r); // use closure
-                } // ...otherwise use 'raw' value based on cname (default, no action needed here)
                  */
             }
         });
