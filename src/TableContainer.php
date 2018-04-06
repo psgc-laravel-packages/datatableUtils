@@ -7,16 +7,15 @@ use stdClass;
 use PsgcLaravelPackages\Utils\Helpers; // %FIXME: outside dependency
 use PsgcLaravelPackages\DatatableUtils\FieldRenderable;
 
-
 // %FIXME: this package requires that models implement Nameable interface (which btw is local to project, should be
 // moved to be part of this package)
 class TableContainer
 {
+    public    $tablename;
 
     protected $_modelClass;
     protected $_columns;
     protected $_meta;
-    public $tablename;
 
     // $modelClass must be fully qualified namespace
     public function __construct(string $tablename, string $modelClass, array $colConfigs)
@@ -51,23 +50,7 @@ class TableContainer
                 $this->_meta[$key] = json_encode($copy);
             }
         }
-        /*
-            $dtC =  new TableContainer( 'purchaseorders', '\App\Models\Purchaseorder', [
-                //'guid.link-site.purchaseorders.show',
-                //json_encode(['guid'=>['link'=>'site.purchaseorders.show']]),
-                [
-                    'colName'=>'guid', // colName -> column name in DB, not displayed
-                    'op'=>'link_to_route',
-                    'route'=>'site.purchaseorders.show',
-                    'resourceIdCol'=>'guid', // column value to use for route param if applicable
-                ],
-                ['colName'=>'postate'],
-                ['colName'=>'slug'],
-                ['colName'=>'poname']
-            ] );
-         */
     }
-
 
     public function meta() : array
     {
@@ -84,7 +67,7 @@ class TableContainer
     //   ~ if not listed here will just default to 'pass-through' of raw column/field name's value
     //   ~ $colConfigs has to be passed by caller, as PHP doesn't carry state between requests (thus
     //        we have no way to re-init the same object of this class)
-//   %TODO: add type hints (eloquent collections? objects? array gives error)
+    //   %TODO: add type hints (eloquent collections? objects? array gives error)
     public static function renderColumnVals(&$records, array $meta)
     {
         //dd($meta);
@@ -104,13 +87,6 @@ class TableContainer
                     default:
                         $r->{$ccElem} = ($r instanceof FieldRenderable) ? $r->renderField($ccElem) : $ccElem;
                 }
-                //dd($json);
-                /*
-                } else if ( is_string($ccElem) )  {
-                    // ccElem is a simple string
-                    $r->{$ccElem} = ($r instanceof FieldRenderable) ? $r->renderField($ccElem) : $ccElem;
-                }
-                 */
             }
         });
         return $records;
