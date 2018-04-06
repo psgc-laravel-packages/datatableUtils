@@ -53,18 +53,24 @@ class TableContainer
                 $col, // prefix with underscore
                 //'_'.$col, // prefix with underscore %TODO: do this in the pakcage lib , renderColumnVals()
                 $modelClass::_renderFieldKey($col)
-                //function($r) { return link_to_route('site.projects.show',$r->renderField('guid'),$r->guid)->toHtml(); }
             );
         }
     }
 
-    // $_setter is a closure
-    public function addColumn(string $_data, string $_title, Closure $_setter=null, string $_name=null)
+    public function addColumn(string $_data, string $_title, string $_name=null)
     {
+        if ( Helpers::isJson($cname) ) {
+            $json = json_decode($cname);
+            switch ($json->op) {
+                case 'link_to_route':
+                    $_data = $json->colName.'_'.$json->op; // replace with string that will be used below for renderColumnVals()
+                    break;
+            }
+        }
+
         $c = new stdClass();
         $c->data   = $_data;
         $c->title  = $_title;
-        $c->setter  = $_setter; // closure
         $c->name   = !empty($_name) ? $_name : $_data;
         $this->_columns[] = $c;
     }
@@ -86,24 +92,27 @@ class TableContainer
     {
         //$columns = $this->_columns;
         $records->each(function($r) use($columns) { // Render html for each row's inline form /*
-            foreach ($columns as $c) {
-                //$cname = $c->name;
-                $cname = $c;
-                if ( Helpers::isJson($cname) ) {
-                    $json = json_decode($cname);
+            foreach ($columns as $colElem) {
+                if ( Helpers::isJson($colElem) ) {
+                    $json = json_decode($colElem);
                     switch ($json->op) {
                         case 'link_to_route':
                             $resourceIdCol = $json->resourceIdCol; // slug, guid, id (pkid), etc
                             $resourceVal = $r->{$resourceIdCol}; // the actual object's value for this field
                             $renderedVal = ($r instanceof FieldRenderable) ? $r->renderField($json->colName) : $r->{$json->colName};
-                            $r->{$cname} =  link_to_route($json->route,$renderedVal,$resourceVal)->toHtml();
+                            //$r->{$colElem} =  link_to_route($json->route,$renderedVal,$resourceVal)->toHtml();
+                            $columns[$json->colName.'_'.$json->op] = link_to_route($json->route,$renderedVal,$resourceVal)->toHtml();
+                            unset($columns[$colElem]);
                             break;
                         default:
-                            $r->{$cname} = ($r instanceof FieldRenderable) ? $r->renderField($cname) : $cname;
+                            $r->{$colElem} = ($r instanceof FieldRenderable) ? $r->renderField($colElem) : $colElem;
                     }
                     //dd($json);
+                } else if ( is_string($colElem) {
+                    // colElem is a simple string
+                    $r->{$colElem} = ($r instanceof FieldRenderable) ? $r->renderField($colElem) : $colElem;
                 } else {
-                    $r->{$cname} = ($r instanceof FieldRenderable) ? $r->renderField($cname) : $cname;
+                    throw new \Exception('Column Object must be json string or simple string');
                 }
                 /*
                 if ( !is_null($c->setter) && is_callable($c->setter) ) {
