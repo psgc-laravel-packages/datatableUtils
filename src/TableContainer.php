@@ -59,6 +59,7 @@ class TableContainer
 
     public function columns() : array
     {
+        //dd( $this->_columns );
         return $this->_columns;
     }
 
@@ -70,21 +71,29 @@ class TableContainer
     //   %TODO: add type hints (eloquent collections? objects? array gives error)
     public static function renderColumnVals(&$records, array $meta)
     {
+//dd($meta);
         $records->each(function($r) use($meta) { // Render html for each row's inline form
+//dd($r->toArray());
             $attrKeys = array_keys($r->getAttributes());
-            //dd($meta,$attrKeys);
-            //foreach ($meta as $ccElem)
+            $attrKeys = array_unique( array_merge($attrKeys, array_keys($meta)) );  // some meta keys will not have record keys (such as virtuals)
+//dd($meta,$attrKeys);
             foreach ($attrKeys as $key) { 
                 if ( array_key_exists($key,$meta) ) {
                     $ccElem = $meta[$key];
                     $json = json_decode($ccElem);
                     // %FIXME: op is required
                     switch ($json->op) {
+                        case 'virtual_column':
+                            if ( $r instanceof FieldRenderable ) {
+                                // create a new column 'virtual' using rednerField(), which must be implemented by model for that column
+                                // eg: # of users for an organization, a count on a related table [users]
+                                $r->{$json->colName.'_'.$json->op} = $r->renderField($key);
+                            }
+                            break;
                         case 'link_to_route':
                             $resourceIdCol = $json->resourceIdCol; // slug, guid, id (pkid), etc
                             $resourceVal = $r->{$resourceIdCol}; // the actual object's value for this field
                             $renderedVal = ($r instanceof FieldRenderable) ? $r->renderField($json->colName) : $r->{$json->colName};
-                            //$r->{$ccElem} =  link_to_route($json->route,$renderedVal,$resourceVal)->toHtml();
                             $r->{$json->colName.'_'.$json->op} = link_to_route($json->route,$renderedVal,$resourceVal)->toHtml();
                             //unset($meta[$ccElem]);
                             break;
@@ -92,7 +101,7 @@ class TableContainer
                             $r->{$ccElem} = ($r instanceof FieldRenderable) ? $r->renderField($ccElem) : $ccElem;
                     }
                 } else {
-                    //dd( class_implements($r) );
+//dd( class_implements($r) );
                     if ( $r instanceof FieldRenderable ) {
                         switch ($key) {
                             case 'created_at':
