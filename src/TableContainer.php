@@ -91,8 +91,18 @@ class TableContainer
                             }
                             break;
                         case 'link_to_route':
-                            $resourceIdCol = $json->resourceIdCol; // slug, guid, id (pkid), etc
-                            $resourceVal = $r->{$resourceIdCol}; // the actual object's value for this field
+
+                            // Walk the relations chain...example, User belogs to Department, which belongs to Company: user.department.company will generate $r->department->company
+                            $resourceVal = (function() use($r,$json) {
+                                // Resource ID Column: jobitems.slug => slug on related table, slug => slug on own table
+                                $ricChain = explode('.',$json->resourceIdCol); // slug, guid, id (pkid), etc  
+                                $resourceVal = $r; // init
+                                foreach ($ricChain as $e) {
+                                    $resourceVal = $resourceVal->{$e};
+                                }
+                                return $resourceVal;
+                            })();
+
                             $renderedVal = ($r instanceof FieldRenderable) ? $r->renderField($json->colName) : $r->{$json->colName};
                             $r->{$json->colName.'_'.$json->op} = link_to_route($json->route,$renderedVal,$resourceVal)->toHtml();
                             //unset($meta[$ccElem]);
