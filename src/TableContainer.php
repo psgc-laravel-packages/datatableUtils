@@ -69,8 +69,9 @@ class TableContainer
     //   ~ $colConfigs has to be passed by caller, as PHP doesn't carry state between requests (thus
     //        we have no way to re-init the same object of this class)
     //   %TODO: add type hints (eloquent collections? objects? array gives error)
-    public static function renderColumnVals(&$records, array $meta)
+    public static function renderColumnVals(&$records, ?array $meta=[])
     {
+        $meta = $meta ?: [];
 //dd($meta);
         $records->each(function($r) use($meta) { // Render html for each row's inline form
 //dd($r->toArray());
