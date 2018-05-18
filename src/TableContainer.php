@@ -69,15 +69,18 @@ class TableContainer
     //   ~ $colConfigs has to be passed by caller, as PHP doesn't carry state between requests (thus
     //        we have no way to re-init the same object of this class)
     //   %TODO: add type hints (eloquent collections? objects? array gives error)
-    public static function renderColumnVals(&$records, ?array $meta=[])
+    // %FIXME: make this faster by passing reference? &$records
+    public static function renderColumnVals($records, ?array $meta=[])
     {
-        $meta = $meta ?: [];
+$meta = $meta ?: [];
 //dd($meta);
         $records->each(function($r) use($meta) { // Render html for each row's inline form
+
 //dd($r->toArray());
             $attrKeys = array_keys($r->getAttributes());
             $attrKeys = array_unique( array_merge($attrKeys, array_keys($meta)) );  // some meta keys will not have record keys (such as virtuals)
 //dd($meta,$attrKeys);
+            // First take care of the metas, before we override the record values for display
             foreach ($attrKeys as $key) { 
                 if ( array_key_exists($key,$meta) ) {
                     $ccElem = $meta[$key];
@@ -103,6 +106,7 @@ class TableContainer
                                 }
                                 return $resourceVal;
                             })();
+//dd($resourceVal,$json);
 
                             $renderedVal = ($r instanceof FieldRenderable) ? $r->renderField($json->colName) : $r->{$json->colName};
                             /* alternative if instanceof doesn't work
@@ -119,7 +123,15 @@ class TableContainer
                             $r->{$ccElem} = ($r instanceof FieldRenderable) ? $r->renderField($ccElem) : $ccElem;
                     }
                 } else {
-//dd( class_implements($r) );
+                    // Do in 2nd pass below
+                }
+            } // foreach() 1 of 2
+
+            foreach ($attrKeys as $key) { 
+                if ( array_key_exists($key,$meta) ) {
+                    // done in first pass above
+                } else {
+                    //dd( class_implements($r) );
                     if ( $r instanceof FieldRenderable ) {
                         switch ($key) {
                             case 'created_at':
@@ -132,10 +144,13 @@ class TableContainer
                         }
                     } // else pass-through raw value
                 }
-            } // foreach()
+            } // foreach() 2 of 2
+
         }); // ->each(...)
+
         return $records;
-    }
+
+    } // renderColumnVals()
 
 }
 
