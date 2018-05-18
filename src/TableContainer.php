@@ -81,6 +81,7 @@ $meta = $meta ?: [];
             $attrKeys = array_unique( array_merge($attrKeys, array_keys($meta)) );  // some meta keys will not have record keys (such as virtuals)
 //dd($meta,$attrKeys);
             // First take care of the metas, before we override the record values for display
+            // %FIXME: still potentially buggy: *any* call to renderField() that changes $r->{$key} should be done after all other processing that needs the raw values !
             foreach ($attrKeys as $key) { 
                 if ( array_key_exists($key,$meta) ) {
                     $ccElem = $meta[$key];
@@ -120,7 +121,7 @@ $meta = $meta ?: [];
                             //unset($meta[$ccElem]);
                             break;
                         default:
-                            $r->{$ccElem} = ($r instanceof FieldRenderable) ? $r->renderField($ccElem) : $ccElem;
+                            $r->{$ccElem} = ($r instanceof FieldRenderable) ? $r->renderField($ccElem) : $ccElem; // %FIXME: potential bug if renderField() is called here
                     }
                 } else {
                     // Do in 2nd pass below
