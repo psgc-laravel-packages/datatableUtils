@@ -105,6 +105,13 @@ class TableContainer
                             })();
 
                             $renderedVal = ($r instanceof FieldRenderable) ? $r->renderField($json->colName) : $r->{$json->colName};
+                            /* alternative if instanceof doesn't work
+                            if ( in_array('PsgcLaravelPackages\DatatableUtils\FieldRenderable', class_implements($r)) ) {
+                                $renderedVal = $r->renderField($json->colName); // shows name for job, pkid for project
+                            } else {
+                                $renderedVal = $r->{$json->colName}; // shows pkid for both
+                            }
+                             */
                             $r->{$json->colName.'_'.$json->op} = link_to_route($json->route,$renderedVal,$resourceVal)->toHtml();
                             //unset($meta[$ccElem]);
                             break;
