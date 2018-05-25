@@ -103,11 +103,15 @@ $meta = $meta ?: [];
                                 $ricChain = explode('.',$json->resourceIdCol); // slug, guid, id (pkid), etc  
                                 $resourceVal = $r; // init
                                 foreach ($ricChain as $e) {
+                                    if ( !isset( $resourceVal->{$e} ) ) {
+                                        $resourceVal = null;
+                                        continue;
+                                    }
                                     $resourceVal = $resourceVal->{$e};
                                 }
                                 return $resourceVal;
                             })();
-//dd($resourceVal,$json);
+                            //dd($resourceVal,$json);
 
                             $renderedVal = ($r instanceof FieldRenderable) ? $r->renderField($json->colName) : $r->{$json->colName};
                             /* alternative if instanceof doesn't work
@@ -117,7 +121,11 @@ $meta = $meta ?: [];
                                 $renderedVal = $r->{$json->colName}; // shows pkid for both
                             }
                              */
-                            $r->{$json->colName.'_'.$json->op} = link_to_route($json->route,$renderedVal,$resourceVal)->toHtml();
+                            if ( null===$resourceVal ) {
+                                $r->{$json->colName.'_'.$json->op} = $renderedVal;
+                            } else {
+                                $r->{$json->colName.'_'.$json->op} = link_to_route($json->route,$renderedVal,$resourceVal)->toHtml();
+                            }
                             //unset($meta[$ccElem]);
                             break;
                         default:
