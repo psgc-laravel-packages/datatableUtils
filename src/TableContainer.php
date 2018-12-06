@@ -6,6 +6,20 @@ use stdClass;
 
 use PsgcLaravelPackages\Utils\Helpers; // %FIXME: outside dependency
 use PsgcLaravelPackages\DatatableUtils\FieldRenderable;
+/*
+ Example usage with query_params in link_to_route:
+    $dtC = new TableContainer( 'contents', '\App\Models\Languages\Content', [
+        [
+            'colName'=>'slug', // colName -> column name in DB, not displayed
+            'op'=>'link_to_route',
+            'route'=>'admin.languages.contents.show',
+            'resourceIdCol'=>'slug', // column value to use for route param if applicable
+            'query_params'=> ['language_slug'=>'german'],
+        ],
+        ['colName'=>'title'],
+        ['colName'=>'created_at']
+    ]);
+ */
 
 // %FIXME: this package requires that models implement Nameable interface (which btw is local to project, should be
 // moved to be part of this package)
@@ -42,6 +56,9 @@ class TableContainer
             $c['data'] = array_key_exists('op', $ccElem) 
                             ? $key.'_'.$ccElem['op'] // replace with string that will be used below for renderColumnVals()
                             : $key;
+            $c['query_params'] = !empty($ccElem['query_params']) && is_array($ccElem['query_params']) 
+                                    ? $ccElem['query_params']
+                                    : [];
             $this->_columns[] = $c;
 
             if ( array_key_exists('op', $ccElem) ) {
@@ -124,7 +141,11 @@ $meta = $meta ?: [];
                             if ( null===$resourceVal ) {
                                 $r->{$json->colName.'_'.$json->op} = $renderedVal;
                             } else {
-                                $r->{$json->colName.'_'.$json->op} = link_to_route($json->route,$renderedVal,$resourceVal)->toHtml();
+                                // Combine resourceVal with any query arguments (latter defaults to [])
+                                //$queryParams = [$resourceVal]+json_decode(json_encode($json->query_params),true); // convert object to array
+                                $queryParams = [$resourceVal]+(array) $json->query_params; // convert object to array
+                                $r->{$json->colName.'_'.$json->op} = link_to_route($json->route,$renderedVal,$queryParams)->toHtml();
+                                //$r->{$json->colName.'_'.$json->op} = link_to_route($json->route,$renderedVal,$resourceVal)->toHtml();
                             }
                             //unset($meta[$ccElem]);
                             break;
