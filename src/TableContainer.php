@@ -143,7 +143,7 @@ $meta = $meta ?: [];
                             } else {
                                 // Combine resourceVal with any query arguments (latter defaults to [])
                                 //$queryParams = [$resourceVal]+json_decode(json_encode($json->query_params),true); // convert object to array
-                                $queryParams = [$resourceVal]+(array) $json->query_params; // convert object to array
+                                $queryParams = !empty($json->query_params) ? ( [$resourceVal]+(array)$json->query_params ) : $resourceVal; // convert object to array
                                 $r->{$json->colName.'_'.$json->op} = link_to_route($json->route,$renderedVal,$queryParams)->toHtml();
                                 //$r->{$json->colName.'_'.$json->op} = link_to_route($json->route,$renderedVal,$resourceVal)->toHtml();
                             }
